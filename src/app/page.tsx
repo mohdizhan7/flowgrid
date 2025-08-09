@@ -1,6 +1,11 @@
 "use client";
+export const dynamic = 'force-dynamic';
 import { insertTask } from "@/lib/data";
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { FixedSizeList as List } from 'react-window';
+const TBody = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  (props, ref) => <div ref={ref} {...props} />
+);
 import { loadProjects, loadTasks, saveProjects, saveTasks } from "../lib/storage";
 
 /* ===========================
@@ -531,7 +536,7 @@ function ProjectPage({ project, tasks, onBack, onSaveProject, onAddTask, onOpenT
               itemCount={linked.length}
               itemSize={40}
               width="100%"
-              outerElementType={TBody as any}
+              outerElementType={TBody}
             >
               {({ index, style }) => {
                 const t = linked[index];
@@ -731,7 +736,7 @@ function TaskSheet({ tasks, projects, onEdit }:{ tasks:Task[]; projects:Project[
             itemCount={filtered.length}
             itemSize={40}
             width="100%"
-            outerElementType={TBody as any}
+            outerElementType={TBody}
           >
             {({ index, style }) => {
               const t = filtered[index];

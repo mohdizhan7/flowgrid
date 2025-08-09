@@ -22,6 +22,9 @@
       }
     ],
     "incremental": true,
+    "types": [
+      "vitest"
+    ],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]

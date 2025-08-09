@@ -1,6 +1,11 @@
 
 "use client";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
+import { FixedSizeList as List } from "react-window";
+const TBody = React.forwardRef<HTMLTableSectionElement>((props, ref) => (
+  <tbody ref={ref} {...props} />
+));
 
 /* ===========================
    Flowgrid v1.5 — Canvas Build (No Persistence)
@@ -199,72 +204,9 @@ const seedTasks: Task[] = [
 ];
 
 /* ---------- Charts (SVG, no libs) ---------- */
-function MiniBar({ data }: { data: number[] }) {
-  const w = 220, h = 40, pad = 6, max = Math.max(1, ...data), bw = (w - pad * 2) / data.length;
-  return (
-    <svg width={w} height={h} className="mt-2">
-      {data.map((v, i) => {
-        const bh = (v / max) * (h - pad * 2);
-        return <rect key={i} x={pad + i * bw} y={h - pad - bh} width={bw - 4} height={bh} rx={3} className="fill-green-600" />;
-      })}
-    </svg>
-  );
-}
-function MiniLine({ data }: { data: number[] }) {
-  const w = 220, h = 48, pad = 6, max = Math.max(1, ...data);
-  const denom = Math.max(data.length - 1, 1);
-  const points = data
-    .map((v, i) => {
-      const x = pad + (i * (w - pad * 2)) / denom;
-      const y = h - pad - (v / max) * (h - pad * 2);
-      return `${x},${y}`;
-    })
-    .join(" ");
-  return (
-    <svg width={w} height={h} className="mt-2">
-      <polyline
-        points={points}
-        fill="none"
-        stroke="currentColor"
-        className="text-green-600"
-        strokeWidth="2"
-      />
-      {data.map((v, i) => {
-        const x = pad + (i * (w - pad * 2)) / denom;
-        const y = h - pad - (v / max) * (h - pad * 2);
-        return <circle key={i} cx={x} cy={y} r={2} className="fill-green-600" />;
-      })}
-    </svg>
-  );
-}
-function MiniPie({ values, labels }: { values: number[]; labels: string[] }) {
-  const total = Math.max(1, values.reduce((a, b) => a + b, 0));
-  const colors = ["#9CA3AF", "#60A5FA", "#F59E0B", "#A78BFA", "#34D399"];
-  let a = 0; const r = 34, cx = 40, cy = 40;
-  return (
-    <div className="flex items-center gap-4">
-      <svg width="80" height="80" viewBox="0 0 80 80">
-        {values.map((v, i) => {
-          const frac = v / total, angle = frac * Math.PI * 2;
-          const x1 = cx + r * Math.cos(a), y1 = cy + r * Math.sin(a);
-          const x2 = cx + r * Math.cos(a + angle), y2 = cy + r * Math.sin(a + angle);
-          const large = angle > Math.PI ? 1 : 0;
-          const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-          a += angle; return <path key={i} d={d} fill={colors[i % colors.length]} />;
-        })}
-      </svg>
-      <div className="grid gap-1">
-        {labels.map((l, i) => (
-          <div key={l} className="flex items-center gap-2 text-sm">
-            <span className="inline-block h-2 w-2 rounded-full" style={{ background: colors[i % colors.length] }} />
-            <span className="w-28">{l}</span>
-            <span className="text-neutral-500">{values[i]}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+const MiniBar = dynamic(() => import("../components/MiniBar"), { ssr: false });
+const MiniLine = dynamic(() => import("../components/MiniLine"), { ssr: false });
+const MiniPie = dynamic(() => import("../components/MiniPie"), { ssr: false });
 function MiniStack({ series, colors }: { series: number[][]; colors: string[] }) {
   const w = 220, h = 48, pad = 6, days = series[0]?.length || 0;
   const sums = Array.from({ length: days }).map((_, i) => series.reduce((acc, s) => acc + (s[i] || 0), 0));
@@ -390,25 +332,65 @@ function ProjectsIndex({ projects, progress, onOpen, onNew }:{ projects:Project[
         <div className="text-lg font-semibold">Projects</div>
         <Button onClick={onNew}>New Project</Button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
-        {projects.map(p=>{
-          const pr = progress[p.id] || {pct:0,tasksDone:0,tasksTotal:0};
-          const state = pr.pct>=100? "bg-purple-100 text-purple-800" : pr.pct>=70? "bg-green-100 text-green-800" : pr.pct>=40? "bg-amber-100 text-amber-800" : "bg-neutral-100 text-neutral-800";
+      <List
+        height={Math.min(600, Math.ceil(projects.length / 3) * 180)}
+        itemCount={Math.ceil(projects.length / 3)}
+        itemSize={180}
+        width="100%"
+      >
+        {({ index, style }) => {
+          const slice = projects.slice(index * 3, index * 3 + 3);
           return (
-            <Card key={p.id} className="cursor-pointer hover:shadow-xl transition-shadow" onClick={()=> onOpen(p.id)}>
-              <div className="flex items-center gap-3">
-                <div className="text-2xl">{p.icon || "📁"}</div>
-                <div className="font-semibold">{p.name}</div>
-                <div className="ml-auto"><span className={`text-xs px-2 py-1 rounded-full ${state}`}>{p.status}</span></div>
-              </div>
-              <div className="mt-2 text-xs text-neutral-500">Due {humanDate(p.dueDate)}</div>
-              <div className="mt-3"><Progress value={pr.pct} /></div>
-              <div className="mt-2 text-xs">{pr.tasksDone}/{pr.tasksTotal} tasks</div>
-              <div className="mt-2 flex gap-2 flex-wrap">{(p.tags||[]).map(t=> <span key={t} className="text-xs px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200">{t}</span>)}</div>
-            </Card>
+            <div style={style} className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+              {slice.map((p) => {
+                const pr = progress[p.id] || { pct: 0, tasksDone: 0, tasksTotal: 0 };
+                const state =
+                  pr.pct >= 100
+                    ? "bg-purple-100 text-purple-800"
+                    : pr.pct >= 70
+                    ? "bg-green-100 text-green-800"
+                    : pr.pct >= 40
+                    ? "bg-amber-100 text-amber-800"
+                    : "bg-neutral-100 text-neutral-800";
+                return (
+                  <Card
+                    key={p.id}
+                    className="cursor-pointer hover:shadow-xl transition-shadow"
+                    onClick={() => onOpen(p.id)}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="text-2xl">{p.icon || "📁"}</div>
+                      <div className="font-semibold">{p.name}</div>
+                      <div className="ml-auto">
+                        <span className={`text-xs px-2 py-1 rounded-full ${state}`}>{p.status}</span>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-neutral-500">
+                      Due {humanDate(p.dueDate)}
+                    </div>
+                    <div className="mt-3">
+                      <Progress value={pr.pct} />
+                    </div>
+                    <div className="mt-2 text-xs">
+                      {pr.tasksDone}/{pr.tasksTotal} tasks
+                    </div>
+                    <div className="mt-2 flex gap-2 flex-wrap">
+                      {(p.tags || []).map((t) => (
+                        <span
+                          key={t}
+                          className="text-xs px-2 py-1 rounded-full bg-neutral-100 border border-neutral-200"
+                        >
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
           );
-        })}
-      </div>
+        }}
+      </List>
     </div>
   );
 }
@@ -492,20 +474,84 @@ function ProjectPage({ project, tasks, onBack, onSaveProject, onAddTask, onOpenT
       {view==="List" && (
         <Card className="mt-4 overflow-x-auto transition-all">
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-neutral-600">
-              <th className="py-2 pr-3">Title</th><th className="py-2 pr-3">Status</th><th className="py-2 pr-3">Priority</th><th className="py-2 pr-3">Deadline</th><th className="py-2 pr-3">Delivery</th>
-            </tr></thead>
-            <tbody>
-              {linked.map(t=> (
-                <tr key={t.id} className="border-t border-neutral-200">
-                  <td className="py-2 pr-3"><button className="underline" onClick={()=> onOpenTask(t)}>{t.title}</button></td>
-                  <td className="py-2 pr-3"><Select value={t.status} onChange={e=> onUpdateTask({...t,status:e.target.value as TaskStatus})}>{(["Backlog","In Progress","Blocked","Review","Done"] as TaskStatus[]).map(s=> <option key={s}>{s}</option>)}</Select></td>
-                  <td className="py-2 pr-3"><Select value={t.priority} onChange={e=> onUpdateTask({...t,priority:e.target.value as Priority})}>{(["Low","Medium","High","Urgent"] as Priority[]).map(p=> <option key={p}>{p}</option>)}</Select></td>
-                  <td className="py-2 pr-3"><Input type="date" value={fmtDate(t.dueDate || undefined)} onChange={e=> onUpdateTask({...t,dueDate:e.target.value || null})} /></td>
-                  <td className="py-2 pr-3"><Select value={String(t.delivery || 0)} onChange={e=> onUpdateTask({...t,delivery:Number(e.target.value)})}>{[0,1,2,3,4,5].map(n=> <option key={n}>{n}</option>)}</Select></td>
-                </tr>
-              ))}
-            </tbody>
+            <thead>
+              <tr className="text-left text-neutral-600">
+                <th className="py-2 pr-3">Title</th>
+                <th className="py-2 pr-3">Status</th>
+                <th className="py-2 pr-3">Priority</th>
+                <th className="py-2 pr-3">Deadline</th>
+                <th className="py-2 pr-3">Delivery</th>
+              </tr>
+            </thead>
+            <List
+              height={Math.min(400, linked.length * 40)}
+              itemCount={linked.length}
+              itemSize={40}
+              width="100%"
+              outerElementType={TBody as any}
+            >
+              {({ index, style }) => {
+                const t = linked[index];
+                return (
+                  <tr
+                    key={t.id}
+                    style={{ ...style, display: "table", width: "100%" }}
+                    className="border-t border-neutral-200"
+                  >
+                    <td className="py-2 pr-3">
+                      <button className="underline" onClick={() => onOpenTask(t)}>
+                        {t.title}
+                      </button>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Select
+                        value={t.status}
+                        onChange={(e) =>
+                          onUpdateTask({ ...t, status: e.target.value as TaskStatus })
+                        }
+                      >
+                        {(["Backlog", "In Progress", "Blocked", "Review", "Done"] as TaskStatus[]).map((s) => (
+                          <option key={s}>{s}</option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Select
+                        value={t.priority}
+                        onChange={(e) =>
+                          onUpdateTask({ ...t, priority: e.target.value as Priority })
+                        }
+                      >
+                        {(["Low", "Medium", "High", "Urgent"] as Priority[]).map((p) => (
+                          <option key={p}>{p}</option>
+                        ))}
+                      </Select>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Input
+                        type="date"
+                        value={fmtDate(t.dueDate || undefined)}
+                        onChange={(e) =>
+                          onUpdateTask({ ...t, dueDate: e.target.value || null })
+                        }
+                      />
+                    </td>
+                    <td className="py-2 pr-3">
+                      <Select
+                        value={String(t.delivery || 0)}
+                        onChange={(e) =>
+                          onUpdateTask({ ...t, delivery: Number(e.target.value) })
+                        }
+                      >
+                        {[0, 1, 2, 3, 4, 5].map((n) => (
+                          <option key={n}>{n}</option>
+                        ))}
+                      </Select>
+                    </td>
+                  </tr>
+                );
+              }}
+            </List>
           </table>
         </Card>
       )}
@@ -637,27 +683,90 @@ function TaskSheet({ tasks, projects, onEdit }:{ tasks:Task[]; projects:Project[
               {(columns as any).lessons && <th className="py-2 pr-3">Lessons Learned</th>}
             </tr>
           </thead>
-          <tbody>
-            {filtered.map(t=> (
-              <tr key={t.id} className="border-t border-neutral-200">
-                {(columns as any).title && <td className="py-2 pr-3"><button className="underline" onClick={()=> onEdit(t)}>{t.title}</button></td>}
-                {(columns as any).project && <td className="py-2 pr-3">{projects.find(p=> p.id===t.projectId)?.name || "—"}</td>}
-                {(columns as any).done && <td className="py-2 pr-3"><input type="checkbox" checked={!!t.done} readOnly/></td>}
-                {(columns as any).date && <td className="py-2 pr-3">{humanDate(t.date || undefined)}</td>}
-                {(columns as any).due && <td className="py-2 pr-3">{humanDate(t.dueDate || undefined)}</td>}
-                {(columns as any).completion && <td className="py-2 pr-3">{humanDate(t.completionDate || undefined)}</td>}
-                {(columns as any).priority && <td className="py-2 pr-3"><span className={`text-xs px-2 py-1 rounded-full ${priorityColor[t.priority]}`}>{t.priority}</span></td>}
-                {(columns as any).status && <td className="py-2 pr-3"><span className={`text-xs px-2 py-1 rounded-full ${statusColor[t.status]}`}>{t.status}</span></td>}
-                {(columns as any).escalations && <td className="py-2 pr-3">{t.escalations? "Yes":"No"}</td>}
-                {(columns as any).delay && <td className="py-2 pr-3">{t.delay? "Yes":"No"}</td>}
-                {(columns as any).delivery && <td className="py-2 pr-3">{t.delivery ?? 0}</td>}
-                {(columns as any).tools && <td className="py-2 pr-3">{(t.toolsUsed||[]).join(", ")||"—"}</td>}
-                {(columns as any).steps && <td className="py-2 pr-3" title={t.proactiveSteps||""}>{trunc(t.proactiveSteps, 48)}</td>}
-                {(columns as any).feedback && <td className="py-2 pr-3" title={t.stakeholderFeedback||""}>{trunc(t.stakeholderFeedback, 48)}</td>}
-                {(columns as any).lessons && <td className="py-2 pr-3" title={t.lessonsLearned||""}>{trunc(t.lessonsLearned, 48)}</td>}
-              </tr>
-            ))}
-          </tbody>
+          <List
+            height={Math.min(400, filtered.length * 40)}
+            itemCount={filtered.length}
+            itemSize={40}
+            width="100%"
+            outerElementType={TBody as any}
+          >
+            {({ index, style }) => {
+              const t = filtered[index];
+              return (
+                <tr
+                  key={t.id}
+                  style={{ ...style, display: "table", width: "100%" }}
+                  className="border-t border-neutral-200"
+                >
+                  {(columns as any).title && (
+                    <td className="py-2 pr-3">
+                      <button className="underline" onClick={() => onEdit(t)}>
+                        {t.title}
+                      </button>
+                    </td>
+                  )}
+                  {(columns as any).project && (
+                    <td className="py-2 pr-3">
+                      {projects.find((p) => p.id === t.projectId)?.name || "—"}
+                    </td>
+                  )}
+                  {(columns as any).done && (
+                    <td className="py-2 pr-3">
+                      <input type="checkbox" checked={!!t.done} readOnly />
+                    </td>
+                  )}
+                  {(columns as any).date && (
+                    <td className="py-2 pr-3">{humanDate(t.date || undefined)}</td>
+                  )}
+                  {(columns as any).due && (
+                    <td className="py-2 pr-3">{humanDate(t.dueDate || undefined)}</td>
+                  )}
+                  {(columns as any).completion && (
+                    <td className="py-2 pr-3">{humanDate(t.completionDate || undefined)}</td>
+                  )}
+                  {(columns as any).priority && (
+                    <td className="py-2 pr-3">
+                      <span className={`text-xs px-2 py-1 rounded-full ${priorityColor[t.priority]}`}>
+                        {t.priority}
+                      </span>
+                    </td>
+                  )}
+                  {(columns as any).status && (
+                    <td className="py-2 pr-3">
+                      <span className={`text-xs px-2 py-1 rounded-full ${statusColor[t.status]}`}>{t.status}</span>
+                    </td>
+                  )}
+                  {(columns as any).escalations && (
+                    <td className="py-2 pr-3">{t.escalations ? "Yes" : "No"}</td>
+                  )}
+                  {(columns as any).delay && (
+                    <td className="py-2 pr-3">{t.delay ? "Yes" : "No"}</td>
+                  )}
+                  {(columns as any).delivery && (
+                    <td className="py-2 pr-3">{t.delivery ?? 0}</td>
+                  )}
+                  {(columns as any).tools && (
+                    <td className="py-2 pr-3">{(t.toolsUsed || []).join(", ") || "—"}</td>
+                  )}
+                  {(columns as any).steps && (
+                    <td className="py-2 pr-3" title={t.proactiveSteps || ""}>
+                      {trunc(t.proactiveSteps, 48)}
+                    </td>
+                  )}
+                  {(columns as any).feedback && (
+                    <td className="py-2 pr-3" title={t.stakeholderFeedback || ""}>
+                      {trunc(t.stakeholderFeedback, 48)}
+                    </td>
+                  )}
+                  {(columns as any).lessons && (
+                    <td className="py-2 pr-3" title={t.lessonsLearned || ""}>
+                      {trunc(t.lessonsLearned, 48)}
+                    </td>
+                  )}
+                </tr>
+              );
+            }}
+          </List>
         </table>
       </Card>
     </div>

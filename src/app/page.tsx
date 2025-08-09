@@ -362,10 +362,17 @@ function NavBar({ current, onNavigate, projects, onQuickGo, notifications }:{
             <Button onClick={()=> setOpen(s=>!s)} aria-label="Notifications">🔔</Button>
             {notifications.length>0 && (<span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-red-500 text-white text-[11px] grid place-items-center">{notifications.length}</span>)}
             {open && (
-              <div className="absolute right-0 mt-2 w-80 bg-white border border-neutral-200 rounded-xl shadow-xl p-2">
+              <div className="absolute right-0 mt-2 w-80 max-h-60 overflow-auto bg-white border border-neutral-200 rounded-xl shadow-xl p-2">
                 <div className="text-sm font-semibold px-2 py-1">Notifications</div>
                 {notifications.length===0 && <div className="text-sm text-neutral-500 px-2 py-2">No new alerts</div>}
-                {notifications.map((n,i)=> <div key={i} className="px-2 py-2 text-sm border-t border-neutral-100">{n}</div>)}
+                {notifications.map((n,i)=> (
+                  <div
+                    key={i}
+                    className={`px-2 py-2 text-sm ${i>0? 'border-t border-neutral-100':''}`}
+                  >
+                    {n}
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -859,7 +866,7 @@ function Dashboard({ tasks, projects, onCardFilter }:{ tasks:Task[]; projects:Pr
 
 /* ---------- Footer ---------- */
 function Footer(){
-  return <footer className="border-t border-neutral-200 bg-white text-neutral-500 text-xs text-center py-4">Created by — Mohd. Izhan</footer>;
+  return <footer className="border-t border-neutral-200 bg-white text-neutral-500 text-xs text-center py-4 px-4">Created by — Mohd. Izhan</footer>;
 }
 
 /* ---------- App page ---------- */
@@ -1018,10 +1025,11 @@ function QuickAdd({
   };
 
   return (
-    <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-2 py-2 shadow-sm">
+    <div className="flex items-center gap-3 bg-white border border-neutral-200 rounded-xl px-3 py-2 shadow-sm">
       <input
         className="flex-1 px-3 py-2 rounded-lg outline-none"
         placeholder="Quick task…"
+        aria-label="Task title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && go()}
@@ -1030,6 +1038,7 @@ function QuickAdd({
         className="px-3 py-2 rounded-lg border border-neutral-200 bg-white"
         value={projectId}
         onChange={(e) => setProjectId(e.target.value)}
+        aria-label="Project"
         title="Select project"
       >
         <option value="">No Project</option>

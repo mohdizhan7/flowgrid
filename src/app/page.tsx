@@ -949,12 +949,19 @@ export default function Page(){
     return by;
   },[projects,tasks]);
 
-  const quickAddTask = useCallback((title:string, projectId?:string)=>{
-    const iso=new Date().toISOString();
-    const task: Task = { id:Math.random().toString(36).slice(2), projectId, title, status:"Backlog", priority:"Medium", points:1, dueDate:addDays(7), assignees:["Me"], tags:[], description:"", checklist:[], done:false, date:iso, completionDate:null, escalations:false, delay:false, proactiveSteps:"", toolsUsed:[], stakeholderFeedback:"", lessonsLearned:"", delivery:0, createdAt:iso, updatedAt:iso };
-    setTasks(prev=> [task, ...prev]);
-  },[]);
-  const saveTask = (updated: Task)=> setTasks(prev=> prev.map(t=> t.id===updated.id? {...updated, updatedAt:new Date().toISOString() }: t));
+  const quickAddTask = useCallback(async (title: string, projectId?: string) => {
+  const now = new Date().toISOString();
+  const tempId = Math.random().toString(36).slice(2);
+  const t: Task = { id: tempId, projectId: projectId || undefined, title, status:'Backlog', priority:'Medium', points:1, dueDate:new Date(Date.now()+7*864e5).toISOString(), assignees:['Me'], tags:[], description:'', checklist:[], createdAt: now, updatedAt: now, done:false, date: now, completionDate: null, escalations:false, delay:false, proactiveSteps:'', toolsUsed:[], stakeholderFeedback:'', lessonsLearned:'', delivery:0 };
+  setTasks(prev => [t, ...prev]);
+  try {
+    const created = await insertTask({ project_id: projectId || null, title: t.title, status: t.status, priority: t.priority, points: t.points, date: t.date!, due_date: t.dueDate!, completion_date: t.completionDate as any, assignees: t.assignees, tags: t.tags, description: t.description, checklist: t.checklist as any, done: t.done, escalations: t.escalations, delay: t.delay, proactive_steps: t.proactiveSteps, tools_used: t.toolsUsed, stakeholder_feedback: t.stakeholderFeedback, lessons_learned: t.lessonsLearned, delivery: t.delivery });
+    setTasks(prev => prev.map(x => x.id === tempId ? ({ ...t, id: created.id } as Task) : x));
+  } catch {
+    setTasks(prev => prev.filter(x => x.id !== tempId));
+  }
+}, [setTasks]);
+const saveTask = (updated: Task)=> setTasks(prev=> prev.map(t=> t.id===updated.id? {...updated, updatedAt:new Date().toISOString() }: t));
   const deleteTask = (id:string)=> { setTasks(prev=> prev.filter(t=> t.id!==id)); setShowTask(null); };
   const createProject = (p:Project)=> setProjects(prev=> [p,...prev]);
   const updateProject = (p:Project)=> setProjects(prev=> prev.map(x=> x.id===p.id? p: x));

@@ -1059,3 +1059,5 @@ function QuickAdd({
   );
 }
 
+export { ProjectPage, TaskModal, QuickAdd };
+

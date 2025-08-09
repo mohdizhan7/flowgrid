@@ -174,7 +174,7 @@ const priorityColor: Record<Priority, string> = {
 function addDays(n: number) { return new Date(Date.now() + n * 86400000).toISOString(); }
 const nowIso = () => new Date().toISOString();
 const seedProjects: Project[] = [
-  { id: "p1", name: "ITC Dairy – SB TMS Pilot", icon: "🐄", status: "Active", dueDate: addDays(21), tags: ["TMS", "Q3"], description: "Kickoff, config, UAT, go‑live.\\n- Fleet setup\\n- Trip rules\\n- KPIs" },
+  { id: "p1", name: "ITC Dairy – SB TMS Pilot", icon: "🐄", status: "Active", dueDate: addDays(21), tags: ["TMS", "Q3"], description: "Kickoff, config, UAT, go‑live.\n- Fleet setup\n- Trip rules\n- KPIs" },
   { id: "p2", name: "P&G DC – Pick Optimisation", icon: "📦", status: "Planned", dueDate: addDays(35), tags: ["WMS", "Ops"], description: "Reduce split picks, improve wave fill." },
   { id: "p3", name: "CRF Philippines – Reporting", icon: "📊", status: "Active", dueDate: addDays(14), tags: ["Analytics"], description: "Daily CRF dashboard + alerts." },
 ];
@@ -1096,24 +1096,20 @@ export default function Page(){
 
   const visibleTasks = useMemo(()=>{
     return tasks.filter(t=>{
-      if(activeProjectId && t.projectId!==activeProjectId) return false;
-      if(query){
-        const hay=[t.title,t.description||"", (t.tags||[]).join(" "), (t.toolsUsed||[]).join(" "), t.proactiveSteps||"", t.stakeholderFeedback||"", t.lessonsLearned||""].join(" ").toLowerCase();
-        if(!hay.includes(query.toLowerCase())) return false;
-      }
-      return true;
+      const hay = [t.title, t.description||"", (t.tags||[]).join(" ")].join(" ").toLowerCase();
+      return hay.includes(query.toLowerCase());
     });
-  },[tasks,activeProjectId,query]);
+  },[tasks,query]);
 
   const projectProgress = useMemo(()=>{
-    const by: Record<string,{pct:number;tasksDone:number;tasksTotal:number}> = Object.fromEntries(projects.map(p=> [p.id,{pct:0,tasksDone:0,tasksTotal:0}]));
-    for(const t of tasks){
-      if(!t.projectId || !by[t.projectId]) continue;
-      by[t.projectId].tasksTotal += 1;
-      if(t.status==="Done" || t.done) by[t.projectId].tasksDone += 1;
+    const m: Record<string,{pct:number;tasksDone:number;tasksTotal:number}>={};
+    for(const p of projects){
+      const linked = tasks.filter(t=> t.projectId===p.id);
+      const done = linked.filter(t=> t.status==="Done").length;
+      const total = linked.length;
+      m[p.id] = {pct: total? Math.round((done/total)*100) : 0, tasksDone: done, tasksTotal: total};
     }
-    for(const id of Object.keys(by)){ const x=by[id]; x.pct = x.tasksTotal ? Math.round((x.tasksDone/x.tasksTotal)*100):0; }
-    return by;
+    return m;
   },[projects,tasks]);
 
   const quickAddTask = useCallback(async (title: string, projectId?: string) => {
@@ -1133,12 +1129,20 @@ const saveTask = (updated: Task)=> setTasks(prev=> prev.map(t=> t.id===updated.i
   const createProject = (p:Project)=> setProjects(prev=> [p,...prev]);
   const updateProject = (p:Project)=> setProjects(prev=> prev.map(x=> x.id===p.id? p: x));
 
-  const activeProject = activeProjectId? projects.find(p=> p.id===activeProjectId)||null: null;
+  const quickAddTask = (title:string, projectId?:string)=>{
+    const id=Math.random().toString(36).slice(2);
+    const newTask:Task={ id, projectId, title, status:"Backlog", priority:"Medium", assignees:["Me"], tags:[], description:"", checklist:[], createdAt:nowIso(), updatedAt:nowIso() } as Task;
+    setTasks(prev=> [newTask,...prev]);
+  };
 
+  const createProject = (p:Project)=>{ setProjects(prev=> [p,...prev]); };
+  const updateProject = (p:Project)=>{ setProjects(prev=> prev.map(x=> x.id===p.id? p: x)); };
+  const saveTask = (t:Task)=>{ setTasks(prev=> prev.map(x=> x.id===t.id? t: x)); };
+  const deleteTask = (id:string)=>{ setTasks(prev=> prev.filter(t=> t.id!==id)); };
   const runCommand = (cmd:string,arg?:string)=>{
-    if(cmd==="new-task"){ const t=prompt("Task title"); if(t) quickAddTask(t, activeProjectId||undefined); }
-    if(cmd==="go-projects") setPage("projects");
+    if(cmd==="new-task"){ const title=prompt("Task title"); if(title) quickAddTask(title); }
     if(cmd==="go-dashboard") setPage("dashboard");
+    if(cmd==="go-projects") setPage("projects");
     if(cmd==="go-tasks") setPage("tasks");
     if(cmd==="open-project" && arg){ setActiveProjectId(arg); setPage("projects"); }
   };

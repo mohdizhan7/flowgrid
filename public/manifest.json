@@ -1,0 +1,9 @@
+{
+  "name": "Flowgrid",
+  "short_name": "Flowgrid",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#ffffff",
+  "theme_color": "#111111",
+  "icons": []
+}

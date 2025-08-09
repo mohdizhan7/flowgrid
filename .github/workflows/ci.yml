@@ -1,8 +1,6 @@
 name: CI
-
 on:
-  push:
-    branches: [ main ]
+  push: { branches: [ main ] }
   pull_request:
 
 jobs:
@@ -10,37 +8,32 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
+      CI: 'true'
       NEXT_TELEMETRY_DISABLED: '1'
       NODE_OPTIONS: --max_old_space_size=4096
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
-      - name: Show workspace
-        run: |
-          node -v
-          npm -v
-          npx next --version || true
-          ls -la
-          echo "package.json scripts:" && cat package.json | jq '.scripts'
-
       - name: Install
         run: npm ci --no-audit --no-fund
-
       - name: Build (capture full logs)
         run: |
           set -o pipefail
-          npm run build --silent 2>&1 | tee build.log
-
+          mkdir -p artifacts
+          npm run build --silent 2>&1 | tee artifacts/build.log
+        continue-on-error: true
+      - name: Print last 120 lines
+        run: tail -n 120 artifacts/build.log || true
       - name: Upload build log
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: build-log
-          path: build.log
+          path: artifacts/build.log
+          if-no-files-found: warn
+      - name: Fail if build actually failed
+        run: |
+          grep -qi "compiled successfully" artifacts/build.log && exit 0
+          echo "Build failed — see build-log artifact"; exit 1

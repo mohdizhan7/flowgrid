@@ -36,3 +36,15 @@ export async function insertTask(t: Partial<TaskRow>){
   if (error) throw error;
   return data as TaskRow;
 }
+
+export async function updateProject(id: string, patch: Partial<ProjectRow>) {
+  const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data as ProjectRow;
+}
+
+export async function updateTask(id: string, patch: Partial<TaskRow>) {
+  const { data, error } = await supabase.from('tasks').update(patch).eq('id', id).select().single();
+  if (error) throw error;
+  return data as TaskRow;
+}

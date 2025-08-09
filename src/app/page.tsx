@@ -1,6 +1,7 @@
 
 "use client";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { loadProjects, loadTasks, saveProjects, saveTasks } from "../lib/storage";
 
 /* ===========================
    Flowgrid v1.5 — Canvas Build (No Persistence)
@@ -866,8 +867,14 @@ function Footer(){
 
 /* ---------- App page ---------- */
 export default function Page(){
-  const [projects,setProjects]=useState<Project[]>(seedProjects);
-  const [tasks,setTasks]=useState<Task[]>(seedTasks);
+  const [projects,setProjects]=useState<Project[]>(() => {
+    const stored = loadProjects();
+    return stored.length ? stored : seedProjects;
+  });
+  const [tasks,setTasks]=useState<Task[]>(() => {
+    const stored = loadTasks();
+    return stored.length ? stored : seedTasks;
+  });
 
   const [page,setPage]=useState<"dashboard"|"projects"|"tasks">("dashboard");
   const [activeProjectId,setActiveProjectId]=useState<string|null>(null);
@@ -886,6 +893,14 @@ export default function Page(){
     list.push("Heads-up: Carrier onboarding pack pending approvals");
     return list.slice(0,8);
   },[tasks]);
+
+  useEffect(() => {
+    saveProjects(projects);
+  }, [projects]);
+
+  useEffect(() => {
+    saveTasks(tasks);
+  }, [tasks]);
 
   useEffect(()=>{
     function onKey(e: KeyboardEvent){

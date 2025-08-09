@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { TaskModal } from '../src/app/page';
+import TaskModal from '../src/components/TaskModal';
 
 const project = { id: 'p1', name: 'Proj', status: 'Active', tags: [] };
 const task = { id: 't1', projectId: 'p1', title: 'Task', status: 'Backlog', priority: 'Medium', assignees: [], tags: [], checklist: [] };

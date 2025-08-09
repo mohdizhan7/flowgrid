@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { QuickAdd } from '../src/app/page';
+import QuickAdd from '../src/components/QuickAdd';
 
 const projects = [{ id: 'p1', name: 'Proj', status: 'Active', tags: [] }];
 

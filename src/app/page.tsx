@@ -1,7 +1,5 @@
-import { insertTask } from "@/lib/data";
-import { insertTask } from '@/lib/data';
-
 "use client";
+import { insertTask } from "@/lib/data";
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { loadProjects, loadTasks, saveProjects, saveTasks } from "../lib/storage";
 

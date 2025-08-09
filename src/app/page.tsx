@@ -1,5 +1,4 @@
 import { insertTask } from "@/lib/data";
-import { insertTask } from '@/lib/data';
 
 "use client";
 import React, { useEffect, useMemo, useState, useCallback } from "react";

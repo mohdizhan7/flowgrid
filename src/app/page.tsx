@@ -547,7 +547,7 @@ function ProjectPage({ project, tasks, onBack, onSaveProject, onAddTask, onOpenT
       <Card className="mt-4">
         <div className="flex items-center justify-between">
           <div className="font-semibold">Quick Add</div>
-          <QuickAdd onAdd={onAddTask} />
+          <QuickAdd projects={[project]} defaultProjectId={project.id} onAdd={(title) => onAddTask(title)} />
         </div>
       </Card>
     </div>
@@ -857,17 +857,6 @@ function Dashboard({ tasks, projects, onCardFilter }:{ tasks:Task[]; projects:Pr
   );
 }
 
-/* ---------- Quick Add ---------- */
-function QuickAdd({ onAdd }:{ onAdd:(title:string)=>void }){
-  const [title,setTitle]=useState("");
-  return (
-    <div className="flex items-center gap-2">
-      <Input placeholder="Quick task" value={title} onChange={e=> setTitle(e.target.value)} onKeyDown={e=> e.key==="Enter" && title.trim() && (onAdd(title.trim()), setTitle(""))} />
-      <Button onClick={()=>{ if(title.trim()){ onAdd(title.trim()); setTitle(""); } }}>Add</Button>
-    </div>
-  );
-}
-
 /* ---------- Footer ---------- */
 function Footer(){
   return <footer className="border-t border-neutral-200 bg-white text-neutral-500 text-xs text-center py-4">Created by — Mohd. Izhan</footer>;
@@ -973,7 +962,7 @@ export default function Page(){
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2"><Input placeholder="Search tasks… (⌘K for commands)" value={query} onChange={e=> setQuery(e.target.value)} /></div>
             <div className="flex items-center gap-2">
-              <QuickAdd onAdd={(title)=> quickAddTask(title, activeProjectId || undefined)} />
+              <QuickAdd projects={projects} defaultProjectId={activeProjectId} onAdd={quickAddTask} />
             </div>
           </div>
 
@@ -1006,3 +995,58 @@ export default function Page(){
     </main>
   );
 }
+
+
+/* ---------- Quick Add (with project picker) ---------- */
+function QuickAdd({
+  projects,
+  defaultProjectId,
+  onAdd,
+}: {
+  projects: Project[];
+  defaultProjectId?: string | null;
+  onAdd: (title: string, projectId?: string) => void;
+}) {
+  const [title, setTitle] = useState("");
+  const [projectId, setProjectId] = useState<string>(defaultProjectId || "");
+
+  const go = () => {
+    const t = title.trim();
+    if (!t) return;
+    onAdd(t, projectId || undefined);
+    setTitle("");
+  };
+
+  return (
+    <div className="flex items-center gap-2 bg-white border border-neutral-200 rounded-xl px-2 py-2 shadow-sm">
+      <input
+        className="flex-1 px-3 py-2 rounded-lg outline-none"
+        placeholder="Quick task…"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && go()}
+      />
+      <select
+        className="px-3 py-2 rounded-lg border border-neutral-200 bg-white"
+        value={projectId}
+        onChange={(e) => setProjectId(e.target.value)}
+        title="Select project"
+      >
+        <option value="">No Project</option>
+        {projects.map((p) => (
+          <option key={p.id} value={p.id}>
+            {p.icon || "📁"} {p.name}
+          </option>
+        ))}
+      </select>
+      <button
+        onClick={go}
+        disabled={!title.trim()}
+        className="px-3 py-2 rounded-xl bg-black text-white disabled:opacity-50 hover:opacity-90 active:scale-[.99]"
+      >
+        Add
+      </button>
+    </div>
+  );
+}
+

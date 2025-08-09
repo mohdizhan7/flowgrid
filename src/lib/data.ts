@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { getSupabase } from './supabaseClient';
 
 export type ProjectRow = {
   id:string; name:string; icon:string|null; status:string|null;
@@ -17,34 +17,34 @@ export type TaskRow = {
 };
 
 export async function fetchProjects(){
-  const { data, error } = await supabase.from('projects').select('*').order('created_at',{ascending:false});
+  const { data, error } = await getSupabase().from('projects').select('*').order('created_at',{ascending:false});
   if (error) throw error;
   return (data||[]) as ProjectRow[];
 }
 export async function insertProject(p: Partial<ProjectRow>){
-  const { data, error } = await supabase.from('projects').insert(p).select().single();
+  const { data, error } = await getSupabase().from('projects').insert(p).select().single();
   if (error) throw error;
   return data as ProjectRow;
 }
 export async function fetchTasks(){
-  const { data, error } = await supabase.from('tasks').select('*').order('created_at',{ascending:false});
+  const { data, error } = await getSupabase().from('tasks').select('*').order('created_at',{ascending:false});
   if (error) throw error;
   return (data||[]) as TaskRow[];
 }
 export async function insertTask(t: Partial<TaskRow>){
-  const { data, error } = await supabase.from('tasks').insert(t).select().single();
+  const { data, error } = await getSupabase().from('tasks').insert(t).select().single();
   if (error) throw error;
   return data as TaskRow;
 }
 
 export async function updateProject(id: string, patch: Partial<ProjectRow>) {
-  const { data, error } = await supabase.from('projects').update(patch).eq('id', id).select().single();
+  const { data, error } = await getSupabase().from('projects').update(patch).eq('id', id).select().single();
   if (error) throw error;
   return data as ProjectRow;
 }
 
 export async function updateTask(id: string, patch: Partial<TaskRow>) {
-  const { data, error } = await supabase.from('tasks').update(patch).eq('id', id).select().single();
+  const { data, error } = await getSupabase().from('tasks').update(patch).eq('id', id).select().single();
   if (error) throw error;
   return data as TaskRow;
 }
